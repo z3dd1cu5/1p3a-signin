@@ -2,9 +2,10 @@ import io
 import os
 import json
 import sys
-from PIL import Image
+from PIL import Image, ImageSequence
 import numpy as np
 
+gif_black_pixel = [4, 2, 4]
 black_pixel = [0, 0, 0]
 white_pixel = [255, 255, 255]
 letters = "bcefghjkmpqrtvwxy2346789"
@@ -19,14 +20,26 @@ for filename in os.listdir("golden"):
 def captcha(img_data):
     stream = io.BytesIO(img_data)
     im = Image.open(stream)
-    arr = np.asarray(im)
+    black_count = 0
+    choose_frame = None
+    for i, frame in enumerate(ImageSequence.Iterator(im)):
+        frame = frame.convert("RGB")
+        arr = np.asarray(frame)
+        height, width = arr.shape[0], arr.shape[1]
+        cnt = np.sum(arr == gif_black_pixel)
+        if cnt > black_count:
+            black_count = cnt
+            choose_frame = frame
+
+    choose_frame.save("1p3a-captcha.png")
+    arr = np.asarray(choose_frame)
     height, width = arr.shape[0], arr.shape[1]
     clean_arr = np.full(arr.shape, 255, dtype="uint8")
     letter_idx = 0
     result = ""
     for j in range(width):
         for i in range(height):
-            if np.all(arr[i][j] == black_pixel):
+            if np.all(arr[i][j] == gif_black_pixel):
                 if i == 0 or j == 0 or np.any(clean_arr[i - 1][j - 1] != white_pixel):
                     continue
                 q, p, color = [(i - 1, j - 1)], 0, arr[i - 1][j - 1]
@@ -51,11 +64,13 @@ def captcha(img_data):
                     if x + 1 < height and np.all(arr[x + 1][y] == color) and not (x + 1, y) in q:
                         q.append((x + 1, y))
                     p += 1
+                if len(q) < 5:
+                    continue
                 letter_idx += 1
                 letter_arr = clean_arr[up: down + 1, left: right + 1]
                 letter_im = Image.fromarray(letter_arr, mode="RGB")
                 letter_im = letter_im.resize((24, 24), Image.BOX)
-                #letter_im.save(image_file.replace(".png", "-%s.png" % letter_idx))
+                #letter_im.save("letter-%d.png" % letter_idx)
                 q_arr = np.asarray(letter_im)
                 score = []
                 for name, g in golden.items():

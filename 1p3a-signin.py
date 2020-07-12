@@ -120,7 +120,7 @@ def signin(formhash):
     str_slice = r.text[idx:]
     idhash = str_slice.split("'")[1]
 
-    for _ in range(3):
+    for _ in range(30):
         vcode = solve_captcha(idhash) 
         if vcode:
             break
@@ -176,7 +176,7 @@ def day_question():
     idhash = str_slice.split("'")[1]
     formhash = soup.input.get("value")
 
-    for _ in range(3):
+    for _ in range(30):
         vcode = solve_captcha(idhash) 
         if vcode:
             break
